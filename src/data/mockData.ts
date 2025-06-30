@@ -48,7 +48,8 @@ export const mockPosts: Post[] = [
     comments: 23,
     shares: 8,
     timestamp: '2小时前',
-    liked: false
+    liked: false,
+    circleId: '1'
   },
   {
     id: '2',
@@ -58,7 +59,8 @@ export const mockPosts: Post[] = [
     comments: 12,
     shares: 5,
     timestamp: '4小时前',
-    liked: true
+    liked: true,
+    circleId: '2'
   },
   {
     id: '3',
@@ -69,7 +71,8 @@ export const mockPosts: Post[] = [
     comments: 45,
     shares: 12,
     timestamp: '6小时前',
-    liked: false
+    liked: false,
+    circleId: '1'
   },
   {
     id: '4',
@@ -80,7 +83,8 @@ export const mockPosts: Post[] = [
     comments: 18,
     shares: 3,
     timestamp: '8小时前',
-    liked: false
+    liked: false,
+    circleId: '1'
   },
   {
     id: '5',
@@ -91,7 +95,39 @@ export const mockPosts: Post[] = [
     comments: 34,
     shares: 15,
     timestamp: '10小时前',
-    liked: true
+    liked: true,
+    circleId: '4'
+  },
+  // 添加付费帖子示例
+  {
+    id: '6',
+    user: mockUsers[0],
+    content: '独家分享：我的护肤秘籍和产品推荐清单！经过一年的试用和对比，终于整理出这份超详细的护肤指南。包含不同肌肤类型的产品推荐、使用顺序、注意事项等。相信对大家会很有帮助！✨',
+    image: 'https://images.pexels.com/photos/3762879/pexels-photo-3762879.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop',
+    likes: 89,
+    comments: 23,
+    shares: 12,
+    timestamp: '1天前',
+    liked: false,
+    isPaid: true,
+    price: 50,
+    isPurchased: false,
+    circleId: '1' // 非付费圈子
+  },
+  {
+    id: '7',
+    user: mockUsers[2],
+    content: '摄影技巧大公开！从构图到后期，手把手教你拍出朋友圈点赞最多的照片。包含20个实用技巧和案例分析，让你的摄影水平快速提升！📸',
+    image: 'https://images.pexels.com/photos/1264210/pexels-photo-1264210.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
+    likes: 156,
+    comments: 45,
+    shares: 28,
+    timestamp: '2天前',
+    liked: false,
+    isPaid: true,
+    price: 80,
+    isPurchased: false,
+    circleId: '3' // 非付费圈子
   }
 ]
 
@@ -230,6 +266,7 @@ export const generateMorePosts = (startId: number = 11): Post[] => {
   for (let i = 0; i < 8; i++) {
     const user = mockUsers[Math.floor(Math.random() * mockUsers.length)]
     const hasImage = Math.random() > 0.4
+    const isPaid = Math.random() > 0.8 // 20% 概率为付费帖子
     
     additionalPosts.push({
       id: (startId + i).toString(),
@@ -240,7 +277,11 @@ export const generateMorePosts = (startId: number = 11): Post[] => {
       comments: Math.floor(Math.random() * 50) + 1,
       shares: Math.floor(Math.random() * 20) + 1,
       timestamp: `${Math.floor(Math.random() * 24) + 1}小时前`,
-      liked: Math.random() > 0.7
+      liked: Math.random() > 0.7,
+      isPaid,
+      price: isPaid ? Math.floor(Math.random() * 100) + 20 : undefined,
+      isPurchased: false,
+      circleId: ['1', '3', '5'][Math.floor(Math.random() * 3)] // 只在非付费圈子中
     })
   }
 

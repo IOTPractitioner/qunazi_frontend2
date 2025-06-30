@@ -208,12 +208,22 @@
     <div v-if="circleDetail && (!circleDetail.isPaid || userStore.isCircleJoined(circleDetail.id))" class="flex-1">
       <!-- Posts Tab -->
       <div v-if="activeTab === 'posts'" class="p-4">
-        <div class="columns-2 gap-3 space-y-0">
+        <div class="space-y-4">
+          <!-- Regular Posts -->
           <WaterfallPost 
-            v-for="post in posts" 
+            v-for="post in regularPosts" 
             :key="post.id" 
             :post="post"
             @like="handleLike"
+          />
+          
+          <!-- Paid Posts -->
+          <PaidPostCard
+            v-for="post in paidPosts"
+            :key="post.id"
+            :post="post"
+            @like="handleLike"
+            @purchase-click="handlePostPurchaseClick"
           />
         </div>
       </div>
@@ -265,6 +275,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Post Detail Modal -->
+    <PostDetailModal
+      v-if="showPostDetail && selectedPost"
+      :post="selectedPost"
+      @close="showPostDetail = false"
+      @purchase-success="handlePostPurchaseSuccess"
+    />
   </div>
 </template>
 
@@ -286,6 +304,8 @@ import {
   Wallet
 } from 'lucide-vue-next'
 import WaterfallPost from '../components/WaterfallPost.vue'
+import PaidPostCard from '../components/PaidPostCard.vue'
+import PostDetailModal from '../components/PostDetailModal.vue'
 import ActivityCard from '../components/ActivityCard.vue'
 import { mockPosts } from '../data/mockData'
 import { mockActivities } from '../data/activitiesData'
@@ -320,8 +340,25 @@ const tabs = [
   { id: 'members', name: '成员' }
 ]
 
-// Mock data for different tabs
-const posts = ref<Post[]>(mockPosts.slice(0, 10))
+// Filter posts by circle and add purchase status
+const allPosts = computed(() => {
+  return mockPosts
+    .filter(post => post.circleId === circleId.value)
+    .map(post => ({
+      ...post,
+      isPurchased: post.isPaid ? userStore.isPostPurchased(post.id) : true
+    }))
+})
+
+// Separate regular and paid posts
+const regularPosts = computed(() => {
+  return allPosts.value.filter(post => !post.isPaid)
+})
+
+const paidPosts = computed(() => {
+  return allPosts.value.filter(post => post.isPaid)
+})
+
 const activities = ref<Activity[]>(mockActivities.slice(0, 5))
 const members = ref([
   { id: 1, name: '小美', role: 'Owner' },
@@ -333,6 +370,8 @@ const members = ref([
 
 const mockPostCount = 2340
 const showPurchaseSuccess = ref(false)
+const showPostDetail = ref(false)
+const selectedPost = ref<Post | null>(null)
 
 const formatNumber = (num: number): string => {
   if (num >= 10000) {
@@ -374,7 +413,8 @@ const handlePurchase = async () => {
         amount: circleDetail.value.price || 0,
         paymentMethod: 'diamonds',
         timestamp: new Date(),
-        status: 'success'
+        status: 'success',
+        type: 'circle'
       }
       userStore.addPurchaseRecord(purchaseRecord)
       
@@ -400,11 +440,28 @@ const handleRecharge = () => {
 }
 
 const handleLike = (postId: string) => {
-  const postIndex = posts.value.findIndex(post => post.id === postId)
-  if (postIndex !== -1) {
-    const post = posts.value[postIndex]
+  const post = allPosts.value.find(p => p.id === postId)
+  if (post && (post.isPurchased || !post.isPaid)) {
     post.liked = !post.liked
     post.likes = post.liked ? post.likes + 1 : post.likes - 1
+  }
+}
+
+const handlePostPurchaseClick = (post: Post) => {
+  if (!userStore.isLoggedIn) {
+    router.push({ name: 'login', query: { from: 'post-purchase' } })
+    return
+  }
+  
+  selectedPost.value = post
+  showPostDetail.value = true
+}
+
+const handlePostPurchaseSuccess = (post: Post) => {
+  // Update the post's purchase status
+  const postIndex = allPosts.value.findIndex(p => p.id === post.id)
+  if (postIndex !== -1) {
+    allPosts.value[postIndex].isPurchased = true
   }
 }
 

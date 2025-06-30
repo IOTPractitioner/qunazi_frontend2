@@ -168,6 +168,56 @@
         </div>
       </div>
 
+      <!-- Paid Post Settings (Only for non-paid circles) -->
+      <div v-if="selectedCircle && !selectedCircle.isPaid" class="mb-4 p-4 bg-white rounded-xl border border-gray-200">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <Gem :size="18" class="text-yellow-500" />
+            <span class="font-medium text-gray-900">付费内容</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <input
+              v-model="isPaidPost"
+              type="checkbox"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span class="text-sm text-gray-700">设为付费帖子</span>
+          </div>
+        </div>
+        
+        <div v-if="isPaidPost" class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">价格设置</label>
+            <div class="flex items-center space-x-2">
+              <input
+                v-model.number="paidPostPrice"
+                type="number"
+                min="1"
+                max="1000"
+                placeholder="输入价格"
+                class="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              />
+              <span class="text-sm text-gray-600">💎 钻石</span>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">建议价格：10-100钻石</p>
+          </div>
+          
+          <div class="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+            <div class="flex items-start space-x-2">
+              <AlertCircle :size="16" class="text-yellow-600 mt-0.5" />
+              <div class="text-sm text-yellow-800">
+                <p class="font-medium mb-1">付费帖子说明：</p>
+                <ul class="space-y-1 text-xs">
+                  <li>• 用户需要支付钻石才能查看完整内容</li>
+                  <li>• 未付费前内容会模糊显示</li>
+                  <li>• 付费圈子不支持发布付费帖子</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Additional Options -->
       <div class="space-y-3">
         <!-- Topic -->
@@ -194,17 +244,67 @@
           <ChevronRight :size="16" class="text-gray-400" />
         </button>
 
-        <!-- Circle -->
+        <!-- Circle Selection -->
         <button
           @click="selectCircle"
           class="flex items-center justify-between w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
         >
           <div class="flex items-center space-x-3">
             <Users :size="20" class="text-purple-500" />
-            <span class="text-gray-700">选择圈子</span>
+            <div class="text-left">
+              <span class="text-gray-700">{{ selectedCircle ? selectedCircle.name : '选择圈子' }}</span>
+              <p v-if="selectedCircle?.isPaid" class="text-xs text-yellow-600">付费圈子 - 不支持付费帖子</p>
+            </div>
           </div>
           <ChevronRight :size="16" class="text-gray-400" />
         </button>
+      </div>
+    </div>
+
+    <!-- Circle Selection Modal -->
+    <div v-if="showCircleSelection" class="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+      <div class="bg-white rounded-t-2xl w-full max-w-md max-h-[70vh] overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 class="text-lg font-bold text-gray-900">选择圈子</h3>
+          <button 
+            @click="showCircleSelection = false"
+            class="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+          >
+            <X :size="20" class="text-gray-600" />
+          </button>
+        </div>
+        
+        <div class="p-4 overflow-y-auto max-h-96">
+          <div class="space-y-3">
+            <button
+              v-for="circle in availableCircles"
+              :key="circle.id"
+              @click="handleCircleSelect(circle)"
+              :class="[
+                'flex items-center space-x-3 w-full p-3 rounded-xl border-2 transition-all duration-200',
+                selectedCircle?.id === circle.id
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              ]"
+            >
+              <div class="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
+                <span class="text-white text-sm font-bold">{{ circle.name.charAt(0) }}</span>
+              </div>
+              <div class="flex-1 text-left">
+                <h4 class="font-medium text-gray-900">{{ circle.name }}</h4>
+                <div class="flex items-center space-x-2 text-xs text-gray-500">
+                  <span>{{ formatMemberCount(circle.memberCount) }} 成员</span>
+                  <span v-if="circle.isPaid" class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
+                    付费圈子
+                  </span>
+                </div>
+              </div>
+              <div v-if="selectedCircle?.id === circle.id" class="text-blue-500">
+                <Check :size="18" />
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -238,9 +338,13 @@ import {
   Camera,
   MapPin,
   Hash,
-  AtSign
+  AtSign,
+  Gem,
+  AlertCircle
 } from 'lucide-vue-next'
 import { useUserStore } from '../stores/userStore'
+import { mockCircles } from '../data/circlesData'
+import type { Circle } from '../types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -251,6 +355,10 @@ const images = ref<Array<{ url: string, file: File }>>([])
 const location = ref('')
 const selectedVisibility = ref('public')
 const showVisibilityMenu = ref(false)
+const isPaidPost = ref(false)
+const paidPostPrice = ref(50)
+const selectedCircle = ref<Circle | null>(null)
+const showCircleSelection = ref(false)
 
 const visibilityOptions = {
   public: {
@@ -279,9 +387,25 @@ const visibilityOptions = {
   }
 }
 
-const canPublish = computed(() => {
-  return content.value.trim().length > 0 || images.value.length > 0
+// Only show circles that user has joined
+const availableCircles = computed(() => {
+  return mockCircles.filter(circle => userStore.isCircleJoined(circle.id))
 })
+
+const canPublish = computed(() => {
+  const hasContent = content.value.trim().length > 0 || images.value.length > 0
+  const hasPaidPostPrice = !isPaidPost.value || (paidPostPrice.value > 0)
+  return hasContent && hasPaidPostPrice
+})
+
+const formatMemberCount = (count: number): string => {
+  if (count >= 10000) {
+    return `${(count / 10000).toFixed(1)}万`
+  } else if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}k`
+  }
+  return count.toString()
+}
 
 const selectVisibility = (key: string) => {
   selectedVisibility.value = key
@@ -337,7 +461,17 @@ const mentionFriend = () => {
 }
 
 const selectCircle = () => {
-  alert('选择圈子功能')
+  showCircleSelection.value = true
+}
+
+const handleCircleSelect = (circle: Circle) => {
+  selectedCircle.value = circle
+  showCircleSelection.value = false
+  
+  // If selected circle is paid, disable paid post option
+  if (circle.isPaid) {
+    isPaidPost.value = false
+  }
 }
 
 const handleCancel = () => {
@@ -363,7 +497,10 @@ const handlePublish = async () => {
       content: content.value,
       images: images.value.map(img => img.file),
       location: location.value,
-      visibility: selectedVisibility.value
+      visibility: selectedVisibility.value,
+      isPaid: isPaidPost.value,
+      price: isPaidPost.value ? paidPostPrice.value : undefined,
+      circleId: selectedCircle.value?.id
     }
     
     console.log('发布内容:', publishData)

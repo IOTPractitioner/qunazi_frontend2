@@ -16,6 +16,10 @@ export interface Post {
   shares: number
   timestamp: string
   liked: boolean
+  isPaid?: boolean // 是否为付费帖子
+  price?: number // 付费帖子价格（钻石）
+  isPurchased?: boolean // 当前用户是否已购买
+  circleId?: string // 所属圈子ID
 }
 
 export interface Product {
@@ -167,10 +171,22 @@ export interface PaymentMethod {
 
 export interface PurchaseRecord {
   id: string
-  circleId: string
-  circleName: string
+  circleId?: string
+  circleName?: string
+  postId?: string
+  postTitle?: string
   amount: number
   paymentMethod: string
+  timestamp: Date
+  status: 'success' | 'pending' | 'failed'
+  type: 'circle' | 'post' // 购买类型
+}
+
+export interface PostPurchaseRecord {
+  id: string
+  postId: string
+  userId: string
+  amount: number
   timestamp: Date
   status: 'success' | 'pending' | 'failed'
 }

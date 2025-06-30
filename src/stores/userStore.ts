@@ -16,6 +16,7 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = ref(false)
   const joinedCircles = ref<Set<string>>(new Set())
   const purchaseHistory = ref<PurchaseRecord[]>([])
+  const purchasedPosts = ref<Set<string>>(new Set()) // 已购买的付费帖子
 
   const login = (userData: User) => {
     user.value = {
@@ -27,6 +28,7 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('user', JSON.stringify(user.value))
     localStorage.setItem('isLoggedIn', 'true')
     localStorage.setItem('joinedCircles', JSON.stringify(Array.from(joinedCircles.value)))
+    localStorage.setItem('purchasedPosts', JSON.stringify(Array.from(purchasedPosts.value)))
   }
 
   const logout = () => {
@@ -34,15 +36,18 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn.value = false
     joinedCircles.value.clear()
     purchaseHistory.value = []
+    purchasedPosts.value.clear()
     localStorage.removeItem('user')
     localStorage.removeItem('isLoggedIn')
     localStorage.removeItem('joinedCircles')
+    localStorage.removeItem('purchasedPosts')
   }
 
   const initializeAuth = () => {
     const savedUser = localStorage.getItem('user')
     const savedLoginStatus = localStorage.getItem('isLoggedIn')
     const savedJoinedCircles = localStorage.getItem('joinedCircles')
+    const savedPurchasedPosts = localStorage.getItem('purchasedPosts')
     
     if (savedUser && savedLoginStatus === 'true') {
       user.value = JSON.parse(savedUser)
@@ -50,6 +55,10 @@ export const useUserStore = defineStore('user', () => {
       
       if (savedJoinedCircles) {
         joinedCircles.value = new Set(JSON.parse(savedJoinedCircles))
+      }
+      
+      if (savedPurchasedPosts) {
+        purchasedPosts.value = new Set(JSON.parse(savedPurchasedPosts))
       }
     }
   }
@@ -89,11 +98,21 @@ export const useUserStore = defineStore('user', () => {
     purchaseHistory.value.unshift(record)
   }
 
+  const addPostPurchase = (postId: string) => {
+    purchasedPosts.value.add(postId)
+    localStorage.setItem('purchasedPosts', JSON.stringify(Array.from(purchasedPosts.value)))
+  }
+
+  const isPostPurchased = (postId: string): boolean => {
+    return purchasedPosts.value.has(postId)
+  }
+
   return {
     user,
     isLoggedIn,
     joinedCircles,
     purchaseHistory,
+    purchasedPosts,
     login,
     logout,
     initializeAuth,
@@ -102,6 +121,8 @@ export const useUserStore = defineStore('user', () => {
     isCircleJoined,
     spendDiamonds,
     addDiamonds,
-    addPurchaseRecord
+    addPurchaseRecord,
+    addPostPurchase,
+    isPostPurchased
   }
 })
